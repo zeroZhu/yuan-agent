@@ -1,5 +1,6 @@
 import os
 import re
+import ast
 import inspect
 import platform
 from typing import Tuple, Callable, Literal, List
@@ -158,3 +159,24 @@ class ReActAgent:
             args.append(self._parse_single_arg(current_arg.strip()))
         
         return func_name, args
+    def _parse_single_arg(self, arg_str: str):
+        """解析单个参数"""
+        arg_str = arg_str.strip()
+        
+        # 如果是字符串字面量
+        if (arg_str.startswith('"') and arg_str.endswith('"')) or \
+           (arg_str.startswith("'") and arg_str.endswith("'")):
+            # 移除外层引号并处理转义字符
+            inner_str = arg_str[1:-1]
+            # 处理常见的转义字符
+            inner_str = inner_str.replace('\\"', '"').replace("\\'", "'")
+            inner_str = inner_str.replace('\\n', '\n').replace('\\t', '\t')
+            inner_str = inner_str.replace('\\r', '\r').replace('\\\\', '\\')
+            return inner_str
+        
+        # 尝试使用 ast.literal_eval 解析其他类型
+        try:
+            return ast.literal_eval(arg_str)
+        except (SyntaxError, ValueError):
+            # 如果解析失败，返回原始字符串
+            return arg_str

@@ -9,7 +9,7 @@ from tools import list_files, read_file, rename_file
 #         print(response)
 def main() -> None:
     tools = [list_files, read_file, rename_file]
-    agent = ReActAgent(model = "gemini-3-flash-preview", tools = tools)
+    agent = ReActAgent(model = "gemini-2.5-flash", tools = tools)
     while True:
         input_str = input('请输入你的指令: ')
         output_str = agent.run(input_str)

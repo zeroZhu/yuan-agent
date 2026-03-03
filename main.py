@@ -10,7 +10,10 @@ from tools import list_files, read_file, rename_file
 def main() -> None:
     tools = [list_files, read_file, rename_file]
     agent = ReActAgent(model = "gemini-3-flash-preview", tools = tools)
-    agent.run("列出所有文件")
+    while True:
+        input_str = input('请输入你的指令: ')
+        output_str = agent.run(input_str)
+        print(f'模型返回结果： {output_str}')
 
 if __name__ == "__main__":
     main()

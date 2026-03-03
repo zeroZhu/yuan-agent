@@ -5,6 +5,7 @@ import platform
 from typing import Tuple, Callable, Literal, List
 from string import Template
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from system_prompt_template import system_prompt_template
@@ -24,9 +25,12 @@ class ReActAgent:
         self.system_prompt = self.render_system_prompt()
 
     def run(self, prompt: str) -> None:
+        history_messages = [
+            types.Content(role="user", parts=[types.Part(text=f"<question>{prompt}</question>")]),
+        ]
         while True:
             # 请求模型
-            content = self.call_model(f"<question>{prompt}</question>")
+            content = self.call_model(history_messages)
 
             # 检测 Thought
             thought_match = re.search(r"<thought>(.*?)</thought>", content, re.DOTALL)
@@ -46,7 +50,13 @@ class ReActAgent:
             action = action_match.group(1)
             tool_name, args = self.parse_action(action)
             print(f"\n\n🔧 Action: {tool_name}({', '.join(args)})")
-        # self.call_model(f"<question>{prompt}</question>")
+
+            try:
+                observation = self.tools[tool_name](*args)
+            except Exception as e:
+                observation = f"工具执行错误：{str(e)}"
+            print(f"\n\n🔍 Observation：{observation}")
+            history_messages.append(types.Content(role="user", parts=[types.Part(text=f"<observation>{observation}</observation>")]))
     
     def get_tool_list(self) -> str:
         tool_descriptions = []
@@ -66,7 +76,7 @@ class ReActAgent:
             file_list=file_list_str
         )
 
-    def call_model(self, prompt: str) -> str:
+    def call_model(self, contents) -> str:
         print("\n\n正在请求模型，请稍等...")
         # 启用流式响应
         # response_stream = self.client.models.generate_content_stream(
@@ -80,12 +90,13 @@ class ReActAgent:
         #     print(chunk.candidates[0].content.parts[0].text)
         response = self.client.models.generate_content(
             model=self.model, 
-            contents=prompt,
+            contents=contents,
             config={
                 "system_instruction": self.system_prompt,
             },
         )
         print(response.text)
+        contents.append(types.Content(role="user", parts=[types.Part(text=response.text)]))
         print("\n\n模型返回完毕，开始解析...")
         return response.text if response.text else ""
 

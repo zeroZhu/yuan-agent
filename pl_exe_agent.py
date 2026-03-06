@@ -6,44 +6,67 @@ from dotenv import load_dotenv
 load_dotenv()
 print("GOOGLE_API_KEY:", os.getenv("GOOGLE_API_KEY"))
 
-class pl_exe_agent:
+class PlExeAgent:
     def __init__(self, model: str):
         self.model = model
         self.client = genai.Client()
 
-    def run(self, prompt: str) -> str:
+    def run(self, prompt: str) -> None:
         """
         运行任务，根据用户输入，生成任务计划并执行任务。
         :param prompt: 用户输入
         :return: 任务执行结果
         """
-        print(f"🚀 开始规划目标: {prompt}")
         # 1. 制定计划
         todo_list = self.plan_task(prompt)
-        print(f"📋 计划已生成: {todo_list}")
 
-        while len(todo_list) > 0:
-            task = todo_list.pop(0)
-            
-            task_result = self.execute_task(task)
-            print(f"✅ 任务执行完成: {task_result}")
-        task_result = self.execute_task(task_plan)
-        return task_result
+        # while len(todo_list) > 0:
+        #     task = todo_list.pop(0)
+        #     task_result = self.execute_task(task)
 
-    def plan_task(goal: str) -> str:
+
+        # task_result = self.execute_task(task_plan)
+        # return task_result
+
+    def plan_task(self, prompt: str) -> list:
+        """
+        计划任务，根据用户需求，生成任务计划。
+        :param prompt: 用户需求
+        :return: 任务计划
+        """
+        system_prompt = f"""
+        你是一个任务规划专家。请将用户的目标拆解为 3-5 个具体的、可执行的步骤。
+        必须以 JSON 数组格式输出，例如：["步骤1", "步骤2"]。
+        """
+
+        print(f"🚀 开始规划目标: {prompt}")
+        response = self.client.models.generate_content(
+            model = self.model,
+            contents=prompt,
+            config={
+                "system_instruction": system_prompt,
+                "response_mime_type": "application/json",
+            }
+        )
+        print(f"📋 计划已生成: {response.text}")
+        return response.text
+
+    def re_plan_task(self, goal: str, todo_list: list, result: str) -> list:
         """
         计划任务，根据任务描述，生成任务计划。
         :param task: 任务描述
         :return: 任务计划
         """
         prompt = f"""
-        你是一个任务规划专家。请将用户的目标拆解为 3-5 个具体的、可执行的步骤。
+        你是一个任务规划专家。主要任务是根据用户的目标、上次任务执行结果以及用户任务计划，重新规划任务计划。
         必须以 JSON 数组格式输出，例如：["步骤1", "步骤2"]。
         
         用户目标：{goal}
+        用户任务计划：{todo_list}
+        用户任务新计划：{todo_list}
+        上次任务执行结果：{result}
         """
-        response = self.client.generate_content(prompt)
-        return response.text
+
 
     def execute_task(self, task: str) -> str:
         """
@@ -59,6 +82,8 @@ class pl_exe_agent:
         """
         print(f"🔧 开始执行任务: {task}")
 
+        print(f"✅ 任务执行完成: {task_result}")
+        return result
         
     
  

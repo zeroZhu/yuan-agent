@@ -26,18 +26,21 @@ class PlExeAgent:
         todo_list = self.plan_task(prompt)
         execute_history = []
         finally_answer  = ""
-        
+        print(f"任务计划: {isinstance(todo_list, list)}")
         # 2. 执行计划
         while len(todo_list) > 0:
             question = todo_list.pop(0)
             answer = self.execute_task(question)
-            todo_list = self.re_plan_task(prompt, execute_history)
             execute_history.append({ "question": question, "answer": answer })
+            result = self.re_plan_task(prompt, execute_history)
+            
+            if isinstance(result, list):
+                todo_list = result
+            else:
+                finally_answer = result
             print(f"任务 {question} 执行结果: {answer}")
-
-        # 3. 总结执行结果
-        summary = self.summary_task(prompt, execute_history)
-        print(f"任务执行总结: {summary}")
+        
+        print(f"最后答案: {finally_answer}")
 
 
     def plan_task(self, prompt: str) -> list:
@@ -61,7 +64,7 @@ class PlExeAgent:
             }
         )
         print(f"📋 计划已生成: {response.text}")
-        return response.text
+        return json.loads(response.text) 
 
     def re_plan_task(self, prompt: str, execute_history: list) -> list | str:
         """
@@ -97,6 +100,7 @@ class PlExeAgent:
             }
         )
         print(f"📋 新计划已生成: {response.text}")
+        return json.loads(response.text) 
 
     def execute_task(self, prompt: str) -> str:
         """

@@ -1,6 +1,6 @@
 from google import genai
 from tools import list_files, read_file, rename_file
-import inquirer
+import json
 
 def plan_task(self, prompt: str) -> list:
     """
@@ -26,9 +26,8 @@ def plan_task(self, prompt: str) -> list:
     return response.text
 
 def main() -> None:
-    todo_list = [1,2,3,4]
-    print(todo_list.pop(0))
-    print(todo_list)
+    ret = json.loads("[11111, 111111]")
+    print(isinstance(ret, list))
 
 if __name__ == "__main__":
     main()

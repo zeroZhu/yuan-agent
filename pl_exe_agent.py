@@ -72,7 +72,7 @@ class PlExeAgent:
         :param task: 任务描述
         :return: 任务计划
         """
-        system_prompt = f"""
+        system_prompt = """
         你是一个任务规划专家。主要任务是根据用户的目标、上次任务执行结果以及用户任务计划，重新规划任务计划。
         必须以 JSON 数组格式输出，例如：["步骤1", "步骤2"]。
         判断用户的目标是否已经完成。

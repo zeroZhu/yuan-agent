@@ -26,7 +26,6 @@ class PlExeAgent:
         todo_list = self.plan_task(prompt)
         execute_history = []
         finally_answer  = ""
-        print(f"任务计划: {isinstance(todo_list, list)}")
         # 2. 执行计划
         while len(todo_list) > 0:
             question = todo_list.pop(0)
@@ -72,7 +71,7 @@ class PlExeAgent:
         :param task: 任务描述
         :return: 任务计划
         """
-        system_prompt = f"""
+        system_prompt = """
         你是一个任务规划专家。主要任务是根据用户的目标、上次任务执行结果以及用户任务计划，重新规划任务计划。
         必须以 JSON 数组格式输出，例如：["步骤1", "步骤2"]。
         判断用户的目标是否已经完成。
@@ -87,13 +86,14 @@ class PlExeAgent:
             {
                 "question": "用户问题2",
                 "answer": "用户问题2的答案"
-            }
+            } 
         ]
         """
         print(f"🚀 开始重新规划: {prompt}")
+        history_json = json.dumps(execute_history)
         response = self.client.models.generate_content(
             model = self.model,
-            contents = f"用户目标：{prompt}\n用户执行记录：{str(execute_history)}\n请根据用户目标、上次任务执行结果以及用户任务计划，请重新规划任务计划或者直接返回空数组。",
+            contents = f"用户目标：{prompt}\n用户执行记录：{history_json}\n请根据用户目标、上次任务执行结果以及用户任务计划，请重新规划任务计划或者直接返回空数组。",
             config = {
                 "system_instruction": system_prompt,
                 "response_mime_type": "application/json",

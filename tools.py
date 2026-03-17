@@ -9,12 +9,12 @@ def list_files() -> list[str]:
     :return: 文档目录下的所有文件名称
     :rtype: list[str]
     """
-    list = []
+    files = []
     for item in base_dir.rglob('*'):
         if item.is_file():
-            list.append(item.relative_to(base_dir))
-    print(list)
-    return list
+            files.append(item.relative_to(base_dir))
+    print(files)
+    return files
 
 def read_file(path: str) -> str:
     """
@@ -56,7 +56,7 @@ def write_file(path: str, content: str) -> None:
 def rename_file(path: str, new_name: str) -> None:
     """
     重命名指定文件路径file_path的文件为new_name
-    
+
     :param file_path: 文件路径
     :type file_path: Path
     :param new_name: 新文件名
@@ -73,3 +73,19 @@ def rename_file(path: str, new_name: str) -> None:
         print(f"文件 {file_path} 不存在")
     except PermissionError:
         print(f"权限错误，无法重命名文件 {file_path}")
+
+
+def search_real_estate_price(city: str, district: str = None) -> str:
+    """
+    搜索指定城市和区域的房价信息。如果没有指定区域，则返回该城市的整体房价信息。
+    
+    :param city: 城市名称，例如 "北京"、"上海"、"深圳"
+    :type city: str
+    :param district: 区域名称，例如 "朝阳区"、"浦东新区"（可选）
+    :type district: str
+    :return: 房价信息，包括平均价格、走势等
+    :rtype: str
+    """
+    query = f"{city} {district if district else ''} 房价 {2025}年"
+    print(f"搜索房价: {query}")
+    return f"正在搜索 {city} {' ' + district if district else ''} 的房价信息..."

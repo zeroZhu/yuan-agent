@@ -69,8 +69,10 @@ class ReActAgent:
 
     def render_system_prompt(self) -> str:
         tool_list = self.get_tool_list()
-        file_list = self.tools["list_files"]()
-        file_list_str = str(file_list) if file_list else "无文件"
+        file_list_str = "无文件"
+        if "list_files" in self.tools:
+            file_list = self.tools["list_files"]()
+            file_list_str = str(file_list) if file_list else "无文件"
         return Template(system_prompt_template).substitute(
             operating_system=self.get_operating_system_name(),
             tool_list=tool_list,

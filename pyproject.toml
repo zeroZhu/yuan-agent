@@ -5,10 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "browser-use>=0.12.2",
     "dotenv>=0.9.9",
     "google-genai>=1.65.0",
     "inquirer>=3.4.1",
-    "langchain>=1.2.11",
+    "langchain[google-genai]>=1.2.11",
+    "langchain-google-genai>=4.2.1",
+    "langgraph>=1.1.0",
+    "tavily-python>=0.7.23",
+    "langchain-openai>=1.1.9",
+    "langchain-alibaba>=0.1.1",
+    "openai>=2.16.0",
+    "hello-agents>=0.2.0",
 ]
 
 [dependency-groups]

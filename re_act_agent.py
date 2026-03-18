@@ -33,6 +33,7 @@ class ReActAgent:
             # 请求模型
             content = self.call_model(history_messages)
 
+            
             # 检测 Thought
             thought_match = re.search(r"<thought>(.*?)</thought>", content, re.DOTALL)
             if thought_match:

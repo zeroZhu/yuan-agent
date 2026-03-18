@@ -7,6 +7,7 @@ system_prompt_template = """
 - <action> 采取的工具操作
 - <observation> 工具或环境返回的结果
 - <final_answer> 最终答案
+- <error> 表单
 
 ⸻
 

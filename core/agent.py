@@ -1,12 +1,13 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 from abc import ABC, abstractmethod
-from core import Config, Message
+from .config import Config
+from .message import Message
 from typing import List
 
 class Agent(ABC):
     """智能体基类"""
 
-    def __init__(self, name: str, description: str, system_prompt: str, llm: any, config: Optional[Config]):
+    def __init__(self, name: str, description: str, system_prompt: str, llm: Any, config: Optional[Config]):
         self.name = name
         self.description = description
         self.system_prompt = system_prompt

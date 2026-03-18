@@ -1,11 +1,11 @@
-from typing import Callable
+from typing import Callable, List, Dict, Any
 from base import Tool, ToolParameter
 
 class ToolRegistry:
     """工具注册类"""
     def __init__(self):
         self._tools: dict[str, Tool] = {}
-        self._functions: dict[str, Tool] = {}
+        self._functions: dict[str, Any] = {}
 
     def register_tool(self, tool: Tool):
         """注册工具"""
@@ -51,7 +51,7 @@ class ToolRegistry:
         self._functions.clear()
         print("✅所有工具和函数已注销")
 
-    def get_tools_definitions(self) -> List[Dict[str, Any]]:
+    def get_tools_definitions(self) -> str:
         """获取所有可用工具的格式化描述字符串"""
         descriptions = []
         for tool in self._tools.values():
@@ -62,27 +62,3 @@ class ToolRegistry:
 
         return "\n".join(descriptions) if descriptions else "暂无可用工具"
     
-    def to_openai_schema(self) -> List[Dict[str, Any]]:
-        """转换为 OpenAI function calling schema 格式
-
-        用于 FunctionCallAgent，使工具能够被 OpenAI 原生 function calling 使用
-
-        Returns:
-            符合 OpenAI function calling 标准的 schema
-        """
-        parameters = self.get_parameters()
-
-
-        for tool in self._tools.values():
-            schemas.append({
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": tool.get_parameters()
-            })
-        for key, item in self._functions.values():
-            schemas.append({
-                "name": key,
-                "description": item.description,
-                "parameters": item.get_parameters()
-            })
-        return schemas

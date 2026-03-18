@@ -1,7 +1,7 @@
 import os
 import json
 import inquirer
-from google import genai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,7 +12,11 @@ class PlExeAgent:
         self.model = model
         self.tools = tools
         self.history = []
-        self.client = genai.Client()
+        self.client = OpenAI(
+            # 如果没有配置环境变量，请用阿里云百炼API Key替换：api_key="sk-xxx"
+            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        )
         
 
     def run(self, prompt: str) -> None:
@@ -54,16 +58,16 @@ class PlExeAgent:
         """
 
         print(f"🚀 开始规划目标: {prompt}")
-        response = self.client.models.generate_content(
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        completion = self.client.chat.completions.create(
             model = self.model,
-            contents = prompt,
-            config = {
-                "system_instruction": system_prompt,
-                "response_mime_type": "application/json",
-            }
+            messages=messages,  # type: ignore
         )
-        print(f"📋 计划已生成: {response.text}")
-        return json.loads(response.text) 
+        print(f"📋 计划已生成: {completion.choices[0].message.content}")
+        return json.loads(completion.choices[0].message.content or "[]") 
 
     def re_plan_task(self, prompt: str, execute_history: list) -> list | str:
         """
@@ -91,18 +95,18 @@ class PlExeAgent:
         """
         print(f"🚀 开始重新规划: {prompt}")
         history_json = json.dumps(execute_history)
-        response = self.client.models.generate_content(
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"用户目标：{prompt}\n用户执行记录：{history_json}\n请根据用户目标、上次任务执行结果以及用户任务计划，请重新规划任务计划或者直接返回空数组。"},
+        ]
+        response = self.client.chat.completions.create(
             model = self.model,
-            contents = f"用户目标：{prompt}\n用户执行记录：{history_json}\n请根据用户目标、上次任务执行结果以及用户任务计划，请重新规划任务计划或者直接返回空数组。",
-            config = {
-                "system_instruction": system_prompt,
-                "response_mime_type": "application/json",
-            }
+                messages = messages,  # type: ignore
         )
-        print(f"📋 新计划已生成: {response.text}")
-        return json.loads(response.text) 
+        print(f"📋 新计划已生成: {response.choices[0].message.content}")
+        return json.loads(response.choices[0].message.content or "[]") 
 
-    def execute_task(self, prompt: str) -> str:
+    def execute_task(self, prompt: str) -> str | None:
         """
         执行任务，根据任务计划，执行任务。
         :param task: 任务计划
@@ -113,16 +117,18 @@ class PlExeAgent:
         必须以 字符串 格式输出任务执行结果。
         """
         print(f"🔧 开始执行任务: {prompt}")
-        response = self.client.models.generate_content(
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+        response = self.client.chat.completions.create(
             model = self.model,
-            contents=prompt,
-            config={
-                "system_instruction": system_prompt,
-                "response_mime_type": "application/json",
-            }
+            messages=messages,  # type: ignore
         )
-        print(f"✅ 任务执行完成: {response.text}")
-        return response.text
+        print(f"✅ 任务执行完成: {response.choices[0].message.content}")
+        return response.choices[0].message.content
+    
+
         
     
  

@@ -10,7 +10,7 @@ class Llm:
     """
       初始化客户端。优先使用传入参数，如果未提供，则从环境变量加载。
     """
-    self.model = model or os.getenv("DASHSCOPE_API_KEY")
+    self.model = model or os.getenv("DASHSCOPE_MODEL")
     self.api_key = api_key or os.getenv("DASHSCOPE_API_KEY")
     self.base_url = base_url or "https://dashscope.aliyuncs.com/compatible-mode/v1"
     self.timeout = timeout

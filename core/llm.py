@@ -5,7 +5,7 @@ from openai import OpenAI
 # 加载 .env 文件中的环境变量
 load_dotenv()
 
-class llm:
+class Llm:
   def __init__(self, model: str = "", api_key: str = "", base_url: str = "", timeout: int = 30):
     """
       初始化客户端。优先使用传入参数，如果未提供，则从环境变量加载。

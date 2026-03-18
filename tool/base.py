@@ -1,6 +1,7 @@
 from typing import Dict, Any, List
 from pydantic import BaseModel
 from abc import ABC, abstractmethod
+from hello_agents import HelloAgentsLLM
 
 class ToolParameter(BaseModel):
     """工具参数类"""

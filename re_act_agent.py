@@ -1,18 +1,17 @@
 import os
 import re
 import ast
+import json
 import inspect
 import platform
 from typing import Tuple, Callable, Literal, List
 from string import Template
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from system_prompt_template import system_prompt_template
 
 load_dotenv()
-print("GOOGLE_API_KEY:", os.getenv("GOOGLE_API_KEY"))
 
 class Feedback(BaseModel):
     sentiment: Literal["positive", "neutral", "negative"]
@@ -22,12 +21,15 @@ class ReActAgent:
     def __init__(self, model: str, tools: list[Callable]) -> None:
         self.model = model
         self.tools = { tool.__name__: tool for tool in tools }
-        self.client = genai.Client()
+        self.client = OpenAI(            # 如果没有配置环境变量，请用阿里云百炼API Key替换：api_key="sk-xxx"
+            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+        )
         self.system_prompt = self.render_system_prompt()
 
     def run(self, prompt: str) -> None:
         history_messages = [
-            types.Content(role="user", parts=[types.Part(text=f"<question>{prompt}</question>")]),
+            {"role": "user", "content": f"<question>{prompt}</question>"}
         ]
         while True:
             # 请求模型
@@ -58,7 +60,7 @@ class ReActAgent:
             except Exception as e:
                 observation = f"工具执行错误：{str(e)}"
             print(f"\n\n🔍 Observation：{observation}")
-            history_messages.append(types.Content(role="user", parts=[types.Part(text=f"<observation>{observation}</observation>")]))
+            history_messages.append({"role": "user", "content": f"<observation>{observation}</observation>"})
     
     def get_tool_list(self) -> str:
         tool_descriptions = []
@@ -80,29 +82,114 @@ class ReActAgent:
             file_list=file_list_str
         )
 
+    def render_form(self, title: str, schemas: list[dict]) -> str:
+        return f"请根据以下字段渲染表单：{title}\n{schemas}"
+
     def call_model(self, contents) -> str:
         print("\n\n正在请求模型，请稍等...")
-        # 启用流式响应
-        # response_stream = self.client.models.generate_content_stream(
-        #     model=self.model, 
-        #     contents=prompt,
-        #     config={
-        #         "system_instruction": self.system_prompt,
-        #     },
-        # )
-        # for chunk in response_stream:
-        #     print(chunk.candidates[0].content.parts[0].text)
-        response = self.client.models.generate_content(
-            model=self.model, 
-            contents=contents,
-            config={
-                "system_instruction": self.system_prompt,
-            },
+        # 构建完整的消息列表，包含系统提示
+        messages = [
+            {"role": "system", "content": self.system_prompt}
+        ] + contents
+        print("messages:", messages)
+        # 调用 OpenAI API
+        tools = [
+            {
+            "type": "function",
+            "function": {
+                "name": "render_form",
+                "description": "当AI模型不清楚用户意图时，调用此函数渲染表单向用户提问",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "要渲染的表单标题"
+                        },
+                        "schemas": {
+                            "type": "array",
+                            "description": "要渲染的表单字段列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "field": {
+                                        "type": "string",
+                                        "description": "要渲染的表单字段名称"
+                                    },
+                                    "label": {
+                                        "type": "string",
+                                        "description": "要渲染的表单字段标签"
+                                    },
+                                    "component": {
+                                        "type": "string",
+                                        "description": "要渲染的表单组件名称, 可选值为: input, radio, checkbox"
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "description": "如果组件为radio或checkbox，必须提供选项列表",
+                                        "items": {
+                                            "type": "string",
+                                            "description": "选项值"
+                                        }
+                                    }
+                                },
+                                "required": ["field", "label", "component"],
+                                "additionalProperties": False
+                            }
+                        }
+                    },
+                    "required": ["field", "label", "component"],
+                    "additionalProperties": False
+                }
+            }
+            }
+        ]
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=0.7,
+            tools=tools,
+            tool_choice="auto"
         )
-        print(response.text)
-        contents.append(types.Content(role="user", parts=[types.Part(text=response.text)]))
+        
+        print(response)
+        assistant_message = response.choices[0].message
+        messages.append(assistant_message)
+        if assistant_message.tool_calls:
+            # 模型决定调用函数
+            for tool_call in assistant_message.tool_calls:
+                func_name = tool_call.function.name
+                func_args = json.loads(tool_call.function.arguments)
+                
+                print(f"🤖 模型请求调用函数: {func_name}, 参数: {func_args}")
+                
+                # 执行实际函数
+                if func_name == "render_form":
+                    result = render_form(**func_args)
+                    
+                    # 将执行结果反馈给模型
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": result
+                    })
+
+            # 6. 第二轮对话：带结果再次请求模型生成最终回答
+            final_response = client.chat.completions.create(
+                model="qwen-plus",
+                messages=messages,
+                tools=tools
+            )
+            
+            print("✅ 最终回答:", final_response.choices[0].message.content)
+        else:
+            print("💬 普通回答:", assistant_message.content)
+        # 获取响应内容
+        response_text = response.output_text
+        print(response_text)
+        contents.append({"role": "assistant", "content": response_text})
         print("\n\n模型返回完毕，开始解析...")
-        return response.text if response.text else ""
+        return response_text if response_text else ""
 
     def get_operating_system_name(self):
         os_map = {

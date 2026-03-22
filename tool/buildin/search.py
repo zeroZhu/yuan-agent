@@ -1,7 +1,7 @@
+import os
 from typing import Literal
 from base import Tool
 from pydantic import BaseModel, Field
-from tavily import TavilyClient
 
 class SearchToolOptions(BaseModel):
     """搜索工具参数"""
@@ -67,4 +67,36 @@ class SearchTool(Tool):
             配置后重新运行程序。"""
 
         print(f"🔍 开始智能搜索: {query}")
-        return ""
+
+        for source in self.search_sources:
+            result = ""
+            try:
+                match source:
+                    case "tavily":
+                        result = self.search_tavily(query)
+                    case "serpapi":
+                        result = self.search_serpapi(query)
+                    case _:
+                        result = f"❌ 未知搜索源: {source}"
+            except Exception as e:
+                result = f"❌ 搜索源 {source} 发生错误: {str(e)}"
+            return result
+    
+    def search_tavily(self, query: str) -> str:
+        """使用Tavily API搜索"""
+        if not self.tavily_client:
+            return "❌ Tavily API未配置"
+        try:
+            results = self.tavily_client.search(query)
+            return results
+        except Exception as e:
+            return f"❌ Tavily API搜索失败: {str(e)}"
+   
+    def search_serpapi(self, query: str) -> str:
+        """使用SerpApi搜索"""
+        try:
+            import serpapi
+            results = serpapi.search({"q": query })
+            return results
+        except Exception as e:
+            return f"❌ SerpApi搜索失败: {str(e)}"  

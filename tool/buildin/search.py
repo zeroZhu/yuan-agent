@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 from ..base import Tool
 from ..registry import ToolRegistry

@@ -17,6 +17,7 @@ dependencies = [
     "langchain-alibaba>=0.1.1",
     "openai>=2.16.0",
     "hello-agents>=0.2.0",
+    "serpapi>=1.0.2",
 ]
 
 [dependency-groups]

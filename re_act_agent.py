@@ -148,7 +148,7 @@ class ReActAgent:
             model=self.model,
             messages=messages,
             temperature=0.7,
-            tools=tools,
+            tools=tools,  # type: ignore
             tool_choice="auto"
         )
         
@@ -159,13 +159,13 @@ class ReActAgent:
             # 模型决定调用函数
             for tool_call in assistant_message.tool_calls:
                 func_name = tool_call.function.name
-                func_args = json.loads(tool_call.function.arguments)
+                func_args = json.loads(tool_call.function.arguments) if hasattr(tool_call.function, 'arguments') else {}
                 
                 print(f"🤖 模型请求调用函数: {func_name}, 参数: {func_args}")
                 
                 # 执行实际函数
                 if func_name == "render_form":
-                    result = render_form(**func_args)
+                    result = self.render_form(**func_args)
                     
                     # 将执行结果反馈给模型
                     messages.append({

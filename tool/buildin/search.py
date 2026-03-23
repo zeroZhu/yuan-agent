@@ -1,12 +1,12 @@
 from typing import Literal
-from base import Tool
+from ..base import Tool
+from ..registry import ToolRegistry
 from pydantic import BaseModel, Field
-from tavily import TavilyClient
 
 class SearchToolOptions(BaseModel):
     """搜索工具参数"""
     query: str = Field(description="搜索查询")
-    backend: Literal['hybrid', 'tavily'] = Field(default='hybrid', description="搜索后端模式")
+    
 
 class SearchTool(Tool):
     """
@@ -39,6 +39,7 @@ class SearchTool(Tool):
         if os.getenv("SERPAPI_API_KEY"):
             try:
                 import serpapi
+                self.serpapi_client = serpapi.Client(api_key=os.getenv("SERPAPI_API_KEY"))
                 self.search_sources.append("serpapi")
                 print("✅ SerpApi搜索源已启用")
             except ImportError:
@@ -67,4 +68,49 @@ class SearchTool(Tool):
             配置后重新运行程序。"""
 
         print(f"🔍 开始智能搜索: {query}")
-        return ""
+
+        for source in self.search_sources:
+            try:
+                if source == "tavily":
+                    result = self._search_tavily(query)
+                    if result:
+                        return result
+                elif source == "serpapi":
+                    result = self._search_serpapi(query)
+                    if result:
+                        return result
+            except Exception as e:
+                print(f"⚠️ {source}搜索源调用失败: {e}")
+                continue
+      
+        return "❌ 所有搜索源都失败了，请检查网络连接和API密钥配置"
+    
+    def _search_tavily(self, query: str) -> str:
+        """使用Tavily搜索"""
+        if not self.tavily_client:
+            return "❌ 错误: Tavily搜索源未配置"
+        result = self.tavily_client.search(query)
+        if result:
+            return result
+        else:
+            return "❌ Tavily搜索未返回有效结果"
+
+    def _search_serpapi(self, query: str) -> str:
+        """使用SerpApi搜索"""
+        if not self.serpapi_client:
+            return "❌ 错误: SerpApi搜索源未配置"
+        result = self.serpapi_client.search(query)
+        if result:
+            return result
+        else:
+            return "❌ SerpApi搜索未返回有效结果"
+
+    def create_advanced_search_registry():
+        """创建高级搜索工具注册表"""
+        registry = ToolRegistry()
+
+        search_tool = SearchTool()
+        
+        registry.register_function(name="search_hybrid", description="高级搜索工具，整合Tavily和SerpAPI多个搜索源，提供更全面的搜索结果", function=search_tool.search_hbrid)
+        
+        return registry

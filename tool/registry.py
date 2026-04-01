@@ -51,7 +51,7 @@ class ToolRegistry:
         self._functions.clear()
         print("✅所有工具和函数已注销")
 
-    def get_tools_definitions(self) -> str:
+    def get_tools_descriptions(self) -> str:
         """获取所有可用工具的格式化描述字符串"""
         descriptions = []
         for tool in self._tools.values():

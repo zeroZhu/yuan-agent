@@ -21,26 +21,42 @@ class Llm:
     self.client = OpenAI(api_key=self.api_key, base_url=self.base_url, timeout=self.timeout)
     
   
-  def think(self, messages: List[Dict[str, str]], temperature: float = 0) -> str:
+  def stream(self, messages: List[Dict[str, str]], temperature: float = 0) -> str:
     """
-      调用大语言模型进行思考，并返回其响应。
+      调用大语言模型进行思考，并返回其流式响应。
       参数：
         messages：包含用户消息和助手消息的列表，每个元素为一个字典，格式为 {"role": "user" | "assistant", "content": "消息内容"}。
         temperature：温度参数，用于控制生成的文本的随机性。默认值为0.5。
     """
     print(f"🧠 正在调用 {self.model} 模型...")
     try:
-      response = self.client.responses.create(model=self.model, stream=True, input=messages) # type: ignore
+      response = self.client.responses.create(model=self.model, stream=True, temperature=temperature, input=messages) # type: ignore
       # 处理流式响应
       print("✅ 大语言模型响应成功:")
       collected_content = []
       for chunk in response:
           print(chunk)
           content = chunk.choices[0].delta.content or ""
-          print(content, end="", flush=True)
+          yield content
           collected_content.append(content)
       return "".join(collected_content)
     except Exception as e:
       print(f"调用模型 {self.model} 时出错: {e}")
       raise e
-   
+  
+  def invoke(self, messages: List[Dict[str, str]], temperature: float = 0) -> str:
+    """
+      调用大语言模型进行思考，并返回其完整响应。
+      参数：
+        messages：包含用户消息和助手消息的列表，每个元素为一个字典，格式为 {"role": "user" | "assistant", "content": "消息内容"}。
+        temperature：温度参数，用于控制生成的文本的随机性。默认值为0.5。
+    """
+    print(f"🧠 正在调用 {self.model} 模型...")
+    try:
+      response = self.client.responses.create(model=self.model, stream=True, temperature=temperature, input=messages) # type: ignore
+      # 处理流式响应
+      print("✅ 大语言模型响应成功:")
+      return response.choices[0].message.content or ""
+    except Exception as e:
+      print(f"调用模型 {self.model} 时出错: {e}")
+      raise e

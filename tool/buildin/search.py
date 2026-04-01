@@ -6,7 +6,8 @@ from pydantic import BaseModel, Field
 
 class SearchToolOptions(BaseModel):
     """搜索工具参数"""
-    query: str = Field(description="搜索查询")
+    tavily_key: str | None = Field(description="Tavily API密钥，用于专业AI搜索。")
+    serpapi_key: str | None = Field(description="SerpApi API密钥，用于传统Google搜索。")
     
 
 class SearchTool(Tool):
@@ -24,13 +25,32 @@ class SearchTool(Tool):
         self.search_sources = []
         self._set_search_sources()
 
+    def run(self, parameters: Dict[str, Any]) -> str:
+        """
+            执行搜索
+
+            Args:
+                parameters: 包含搜索查询参数的字典
+
+            Returns:
+                搜索结果
+        """
+        query = parameters.get("query", "").strip()
+        if not query.strip():
+            return "❌ 错误:搜索查询不能为空"
+        return self._search_hybrid(query)
+
+    def get_parameters(self) -> List[ToolParameter]:
+        """获取工具参数定义"""
+        return [ToolParameter(name="query", type="string", description="搜索查询", required=True)]
+
     def _set_search_sources(self):
         """设置搜索后端"""
         # 检查Tavily可用性
         if os.getenv("TAVILY_API_KEY"):
             try:
                 from tavily import TavilyClient
-                self.tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+                self.tavily_client = TavilyClient(api_key=self.options.get("tavily_key", os.getenv("TAVILY_API_KEY")))
                 self.search_sources.append("tavily")
                 print("✅ Tavily搜索源已启用")
             except ImportError:
@@ -40,7 +60,7 @@ class SearchTool(Tool):
         if os.getenv("SERPAPI_API_KEY"):
             try:
                 import serpapi
-                self.serpapi_client = serpapi.Client(api_key=os.getenv("SERPAPI_API_KEY"))
+                self.serpapi_client = serpapi.Client(api_key=self.options.get("serpapi_key", os.getenv("SERPAPI_API_KEY")))
                 self.search_sources.append("serpapi")
                 print("✅ SerpApi搜索源已启用")
             except ImportError:
@@ -51,7 +71,7 @@ class SearchTool(Tool):
         else:
             print("⚠️ 没有可用的搜索源，请配置API密钥")
     
-    def search_hybrid(self, query: str) -> str:
+    def _search_hybrid(self, query: str) -> str:
         """执行搜索"""
         if not query.strip():
             return "❌ 错误:搜索查询不能为空"
